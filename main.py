@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import ParameterGrid
 from config import SIMULATION_CONFIG, ALGORITHM_CONFIG
 from models.environment import Environment
 from algorithms.hybrid_pso_gwo import HybridPSOGWO
@@ -10,6 +11,40 @@ from algorithms.sae import SAE
 from utils.performance import (plot_convergence_delay, evaluate_task_scaling,
                              evaluate_robot_scaling, evaluate_operation_scaling)
 
+import matplotlib.pyplot as plt
+
+def grid_search(env, algorithm_class, param_grid):
+    """网格搜索优化算法参数"""
+    best_params = None
+    best_fitness = float('inf')
+
+    for params in ParameterGrid(param_grid):
+        algorithm = algorithm_class(env, params)
+        _, fitness, _, _, _ = run_algorithm_with_timing(algorithm)
+        if fitness < best_fitness:
+            best_fitness = fitness
+            best_params = params
+
+    return best_params, best_fitness
+
+def plot_convergence(history, algorithm_name):
+    """绘制收敛曲线"""
+    plt.figure(figsize=(10, 6))
+    plt.plot(history, label=f'{algorithm_name} Convergence', color='blue', linewidth=2)
+    plt.title(f'{algorithm_name} Convergence Curve', fontsize=16)
+    plt.xlabel('Iterations', fontsize=14)
+    plt.ylabel('Fitness Value', fontsize=14)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend(fontsize=12)
+    plt.tight_layout()
+    plt.savefig(f'{algorithm_name}_convergence.png', dpi=300)
+    plt.show()
+
+def adaptive_parameters(algorithm, iteration):
+    """动态调整算法参数"""
+    if iteration < algorithm.max_iterations // 2:
+        algorithm.learning_rate = 0.8  # 前半段使用较高学习率
+
 def run_algorithm_with_timing(algorithm):
     """运行算法并记录每次迭代的时间"""
     iteration_times = []
@@ -17,7 +52,7 @@ def run_algorithm_with_timing(algorithm):
     
     # 保存原始的optimize方法
     original_optimize = algorithm.optimize
-    
+
     def timed_optimize():
         best_solution = None
         best_fitness = float('inf')
