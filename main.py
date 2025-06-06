@@ -1,0 +1,139 @@
+import time
+import numpy as np
+import matplotlib.pyplot as plt
+from config import SIMULATION_CONFIG, ALGORITHM_CONFIG
+from models.environment import Environment
+from algorithms.hybrid_pso_gwo import HybridPSOGWO
+from algorithms.pso import PSO
+from algorithms.gwo import GWO
+from algorithms.sae import SAE
+from utils.performance import (plot_convergence_delay, evaluate_task_scaling,
+                             evaluate_robot_scaling, evaluate_operation_scaling)
+
+def run_algorithm_with_timing(algorithm):
+    """运行算法并记录每次迭代的时间"""
+    iteration_times = []
+    start_time = time.time()
+    
+    # 保存原始的optimize方法
+    original_optimize = algorithm.optimize
+    
+    def timed_optimize():
+        best_solution = None
+        best_fitness = float('inf')
+        history = []
+        
+        # 设置采样步长
+        sample_step = 10  # 每10次迭代记录一次时间
+        accumulated_time = 0
+        
+        for i in range(algorithm.max_iterations):
+            iter_start = time.time()
+            
+            # 运行一次迭代
+            current_solution, current_fitness = algorithm._run_iteration()
+            
+            # 更新最优解
+            if current_fitness < best_fitness:
+                best_solution = current_solution.copy()
+                best_fitness = current_fitness
+            
+            # 记录历史
+            history.append(best_fitness)
+            
+            # 累积时间并按步长记录
+            iter_time = (time.time() - iter_start) * 1000  # 转换为毫秒
+            accumulated_time += iter_time
+            
+            if (i + 1) % sample_step == 0:
+                # 记录平均时间
+                iteration_times.append(accumulated_time / sample_step)
+                accumulated_time = 0
+            
+            # 打印进度
+            if (i + 1) % 100 == 0:  # 减少打印频率
+                print(f"Iteration {i + 1}/{algorithm.max_iterations}, "
+                      f"Best Fitness: {best_fitness:.4f}")
+        
+        return best_solution, best_fitness, history
+    
+    # 替换optimize方法
+    algorithm.optimize = timed_optimize
+    
+    # 运行算法
+    best_solution, best_fitness, history = algorithm.optimize()
+    total_time = time.time() - start_time
+    
+    # 恢复原始的optimize方法
+    algorithm.optimize = original_optimize
+    
+    return best_solution, best_fitness, history, iteration_times, total_time
+
+def main():
+    # 修改算法配置以支持1000次迭代
+    ALGORITHM_CONFIG['max_iterations'] = 1000
+    
+    # 初始化环境
+    env = Environment(SIMULATION_CONFIG)
+    
+    # 运行性能测试
+    print("\nRunning performance test...")
+    env.performance_test(num_tests=1000)
+    
+    # 测试不同算法
+    algorithms = {
+        "Hybrid PSO-GWO": HybridPSOGWO,
+        "PSO": PSO,
+        "GWO": GWO,
+        "SAE": SAE
+    }
+    
+    # 运行算法并收集结果
+    results = {}
+    execution_times = {}
+    
+    for name, algorithm_class in algorithms.items():
+        print(f"\nRunning {name}...")
+        algorithm = algorithm_class(env, ALGORITHM_CONFIG)
+        
+        # 运行算法并记录时间
+        best_solution, best_fitness, history, iteration_times, total_time = run_algorithm_with_timing(algorithm)
+        
+        results[name] = {
+            "solution": best_solution,
+            "fitness": best_fitness,
+            "history": history,
+            "iteration_times": iteration_times
+        }
+        execution_times[name] = total_time
+        
+        print(f"{name} completed in {total_time:.2f} seconds")
+        print(f"Best Fitness: {best_fitness:.2f}")
+    
+    # 生成性能评估曲线
+    plot_convergence_delay(results, sample_step=10)  # 传递采样步长参数
+    
+    # 评估不同任务数量的性能 (10-100)
+    task_ranges = list(range(10, 101, 10))  # [10, 20, ..., 100]
+    evaluate_task_scaling(algorithms, SIMULATION_CONFIG, ALGORITHM_CONFIG, task_ranges)
+    
+    # 评估不同机器数量的性能 (100-200)
+    robot_ranges = list(range(100, 201, 20))  # [100, 120, 140, 160, 180, 200]
+    # 临时降低最大迭代次数以加快机器规模测试
+    original_max_iterations = ALGORITHM_CONFIG['max_iterations']
+    ALGORITHM_CONFIG['max_iterations'] = 100  # 临时设置为较小的值
+    evaluate_robot_scaling(algorithms, SIMULATION_CONFIG, ALGORITHM_CONFIG, robot_ranges)
+    # 恢复原始迭代次数
+    ALGORITHM_CONFIG['max_iterations'] = original_max_iterations
+    
+    # 评估不同操作数量的性能 (50-300)
+    operation_ranges = list(range(50, 301, 50))  # [50, 100, ..., 300]
+    evaluate_operation_scaling(algorithms, SIMULATION_CONFIG, ALGORITHM_CONFIG, operation_ranges)
+    
+    # 打印比较结果
+    print("\nAlgorithm Comparison:")
+    for name, result in results.items():
+        print(f"{name}: Fitness = {result['fitness']:.2f}, Time = {execution_times[name]:.2f}s")
+
+if __name__ == "__main__":
+    main()
