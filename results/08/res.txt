@@ -1,0 +1,7 @@
+Algorithm Comparison:
+Hybrid PSO-GWO: Fitness = 1.44, Time = 7.00s
+PSO: Fitness = 0.61, Time = 2.17s
+GWO: Fitness = 2.08, Time = 9.74s
+SAE: Fitness = 2.33, Time = 5.83s
+ACLHO: Fitness = 0.48, Time = 3.66s
+ACLHO Base: Fitness = 0.65, Time = 3.47s

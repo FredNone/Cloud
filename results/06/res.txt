@@ -1,0 +1,6 @@
+Algorithm Comparison:
+Hybrid PS0-GW0:Fitness =1.10，Time = 6.40s
+PS0:Fitness=2.31,Time = 2.62s
+GW0:Fitness=2.39，Time = 12.36s
+SAE:Fitness=2.31,Time = 7.63s
+ACLHO:Fitness =0.62，Time = 4.03s

@@ -4,6 +4,71 @@ from typing import Dict, List
 import time
 from models.environment import Environment
 
+# def plot_convergence_curves(histories_dict, save_path=None, show=True):
+#     """
+#     绘制多个算法的收敛曲线
+#
+#     :param histories_dict: dict类型，键为算法名称，值为对应的fitness历史list（每轮最优fitness）
+#                            e.g., {'PSO': [10, 8, 6, 5.1...], 'ACLHO': [...]}
+#     :param save_path: 图片保存路径（可选）
+#     :param show: 是否显示图像窗口
+#     """
+#     plt.figure(figsize=(10, 6))
+#     for algo_name, history in histories_dict.items():
+#         plt.plot(history, label=algo_name)
+#
+#     plt.xlabel('Iteration')
+#     plt.ylabel('Best Fitness')
+#     plt.title('Convergence Curves of Optimization Algorithms')
+#     plt.legend()
+#     plt.grid(True)
+#
+#     if save_path:
+#         plt.savefig(save_path, dpi=300, bbox_inches='tight')
+#     if show:
+#         plt.show()
+#     plt.close()
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_convergence_curves(histories_dict, save_path=None, show=False):
+    """
+    绘制多个算法的收敛曲线（包含平均曲线和标准差误差带）
+
+    :param histories_dict: dict[str, list[list[float]]]
+           格式如 {'PSO': [[10,9,8,...], [9.5,8.8,...]], 'ACLHO': [[...]...]}
+           即每个算法对应若干次试验的fitness历史序列
+    :param save_path: 图片保存路径（可选）
+    :param show: 是否显示图像窗口
+    """
+    plt.figure(figsize=(10, 6))
+
+    for algo_name, runs in histories_dict.items():
+        runs = np.array(runs)
+        min_len = min(len(run) for run in runs)
+        runs = np.array([run[:min_len] for run in runs])
+
+        mean_curve = np.mean(runs, axis=0)
+        std_curve = np.std(runs, axis=0)
+
+        x = np.arange(min_len)
+        plt.plot(x, mean_curve, label=algo_name)
+        plt.fill_between(x, mean_curve - std_curve, mean_curve + std_curve, alpha=0.2)
+
+    plt.xlabel('Iteration')
+    plt.ylabel('Best Fitness')
+    plt.title('Average Convergence Curves with Std Deviation')
+    plt.legend()
+    plt.grid(True)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    if show:
+        plt.show()
+    plt.close()
+
+
 def plot_convergence_delay(results: Dict, sample_step: int = 10, save_path: str = 'convergence_delay.png'):
     """绘制不同算法的时延收敛曲线"""
     plt.figure(figsize=(12, 8))

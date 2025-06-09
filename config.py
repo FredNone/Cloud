@@ -38,5 +38,19 @@ ALGORITHM_CONFIG = {
         'capacity_weight': 0.4,     # 处理能力权重
         'connection_weight': 0.3    # 连接数权重
 
+    },
+
+    'saeo': {
+        'max_true_evaluations': 1000,  # 最大真实评估次数
+        'regularization': 1e-6,        # 正则化参数
+        'min_distance': 1e-6,          # 最小距离阈值
+        'mutation_rate': 0.1           # 变异概率
+    },
+
+    'ivya': {
+        'vortex_radius': 0.5,  # 涡流半径
+        'vortex_strength': 0.8,  # 涡流强度
+        'attraction_factor': 0.1,  # 吸引力因子
+        'mutation_rate': 0.1  # 变异概率
     }
 }
