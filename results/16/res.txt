@@ -1,0 +1,5 @@
+Algorithm Comparison:
+PSO: Fitness = 2.06, Time = 5.00s
+SAEO: Fitness = 3.47, Time = 6.46s
+IVYA: Fitness = 3.61, Time = 4.91s
+ACLHO_1: Fitness = 0.46, Time = 8.18s

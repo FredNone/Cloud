@@ -59,9 +59,19 @@ class Environment:
             'distance': 0.3,
             'capability': 0.2,
             'assignment': 0.3,
-            'balance': 0.2
+            'balance': 0.2,
+            'network': 0.2  # 网络相关成本的权重
         }
-    
+        # 初始化任务数量和机器人数量
+        self.num_tasks = config['num_tasks']
+        self.num_robots = config['num_robots']
+
+        # 初始化网络延迟矩阵，单位：秒（模拟传输时延）
+        self.network_delay = np.random.uniform(low=0.1, high=1.0, size=(self.num_tasks, self.num_robots))
+
+        # 初始化执行时间矩阵，单位：秒（模拟机器人计算任务时延）
+        self.execution_time = np.random.uniform(low=0.5, high=2.0, size=(self.num_tasks, self.num_robots))
+
     def _calculate_network_latency(self):
         """计算机器间的网络延迟矩阵"""
         # 基础延迟
@@ -139,7 +149,7 @@ class Environment:
                   self.weights['capability'] * normalized_capability +
                   self.weights['assignment'] * assignment_penalty +
                   self.weights['balance'] * load_imbalance +
-                  0.2 * (bandwidth_penalty + connection_penalty))  # 网络惩罚权重
+                  self.weights['network'] * (bandwidth_penalty + connection_penalty))  # 网络惩罚权重
         
         return fitness
     
@@ -158,3 +168,112 @@ class Environment:
         # 计算平均时间（毫秒）
         avg_time = (end_time - start_time) * 1000 / num_tests
         print(f"Average fitness calculation time: {avg_time:.2f} ms")
+
+    def calculate_total_delay(self, solution):
+            """
+            计算某一任务分配方案的总传输+执行时延
+            solution: 长度为 num_tasks 的数组，表示每个任务分配到哪个机器人
+            """
+            total_delay = 0.0
+            for task_id, robot_id in enumerate(solution):
+                transmit_delay = self.network_delay[task_id][robot_id]
+                execution_delay = self.execution_time[task_id][robot_id]
+                total_delay += transmit_delay + execution_delay
+            return total_delay
+
+    #
+    # def calculate_total_delay(self, solution):
+    #     """
+    #     根据任务分配方案，计算任务的总时延。
+    #     :param solution: 任务分配向量，例如 [0, 1, 0, 2, ...]
+    #     :return: 总时延
+    #     """
+    #     total_delay = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         # 你需要根据模型定义通信延迟 + 执行时间
+    #         transmit_delay = self.network_delay[task_id][robot_id]
+    #         execute_time = self.execution_time[task_id][robot_id]
+    #         total_delay += transmit_delay + execute_time
+    #     return total_delay
+    #
+    # def calculate_mismatch_cost(self, solution):
+    #     """
+    #     计算任务分配中的资源不匹配成本。
+    #     可按任务负载与机器人能力差值建模。
+    #     """
+    #     mismatch = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         task_load = self.task_loads[task_id]
+    #         robot_capacity = self.robot_capacities[robot_id]
+    #         mismatch += abs(task_load - robot_capacity)
+    #     return mismatch
+    #
+    # def calculate_priority_penalty(self, solution):
+    #     """
+    #     根据任务的优先级或紧迫度，对不合理分配加罚。
+    #     """
+    #     penalty = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         priority = self.task_priorities[task_id]
+    #         delay = self.network_delay[task_id][robot_id] + self.execution_time[task_id][robot_id]
+    #         penalty += priority * delay  # 紧急任务晚完成惩罚大
+    #     return penalty
+    #
+    # def calculate_total_delay(self, solution):
+    #     """
+    #     根据任务分配方案，计算所有任务的总延迟（network delay + execution time）。
+    #     :param solution: 一个列表，表示每个任务分配到的机器人索引，例如 [0, 2, 1, 0, ...]
+    #     :return: 总时延（浮点数）
+    #     """
+    #     total_delay = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         # 假设这两个矩阵在 Environment 初始化时就已经构建：
+    #         # self.network_delay[task_id][robot_id]: 任务与机器人之间的传输时延
+    #         # self.execution_time[task_id][robot_id]: 机器人处理该任务的时间
+    #
+    #         transmit_delay = self.network_delay[task_id][robot_id]
+    #         execute_time = self.execution_time[task_id][robot_id]
+    #
+    #         # 总时延 = 传输延迟 + 执行时间
+    #         total_delay += transmit_delay + execute_time
+    #
+    #     return total_delay
+    #
+    # def calculate_total_delay(self, solution):
+    #     """根据任务分配方案计算总时延（传输+执行）"""
+    #     total_delay = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         transmit_delay = self.network_delay[task_id][robot_id]
+    #         execute_delay = self.execution_time[task_id][robot_id]
+    #         total_delay += transmit_delay + execute_delay
+    #     return total_delay
+    #
+    # def calculate_mismatch_cost(self, solution):
+    #     """
+    #     计算任务与机器人之间的能力不匹配成本（欧几里得距离）
+    #     距离越大表示能力越不匹配
+    #     """
+    #     total_mismatch = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         task_req = self.task_requirements[task_id]
+    #         robot_cap = self.robot_capabilities[robot_id]
+    #         mismatch = np.linalg.norm(task_req - robot_cap)
+    #         total_mismatch += mismatch
+    #     return total_mismatch
+    #
+    # def calculate_priority_penalty(self, solution):
+    #     """
+    #     计算任务优先级惩罚：根据任务重要性和时延，对高优先任务延迟惩罚更多
+    #     任务优先级越高（数值越大），则对延迟越敏感
+    #     """
+    #     if not hasattr(self, 'task_priority'):
+    #         # 如果未设置任务优先级，初始化为随机[1~5]
+    #         self.task_priority = np.random.randint(1, 6, size=self.num_tasks)
+    #
+    #     total_penalty = 0.0
+    #     for task_id, robot_id in enumerate(solution):
+    #         delay = self.network_delay[task_id][robot_id] + self.execution_time[task_id][robot_id]
+    #         priority = self.task_priority[task_id]
+    #         penalty = priority * delay
+    #         total_penalty += penalty
+    #     return total_penalty
