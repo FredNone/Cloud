@@ -68,6 +68,7 @@ def run_algorithm_with_timing(algorithm):
 
         return best_solution, best_fitness, history
 
+1111
     # 替换optimize方法
     algorithm.optimize = timed_optimize
 
